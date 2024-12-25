@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disease Prediction</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: url('https://www.bu.edu/eng/files/2018/09/healthinformaticsPIC-768x512.jpg') no-repeat center center fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 0;
+            color: #2c3e50;
+        }
+
+        header {
+            background-color: rgba(6, 85, 137, 0.8); /* Semi-transparent */
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background:rgba(23, 120, 184, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            opacity: 0.9; /* Slight transparency to blend with background */
+        }
+
+        h3 {
+            margin-top: 0;
+        }
+
+        .symptom-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .symptom-container label {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #ffffff;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .symptom-container label:hover {
+            background-color: #f0f4f8;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 1.2em;
+            background-color: #25cd66;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color:  #20a051;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            background-color: #eaf2f8;
+            border-radius: 5px;
+            line-height: 1.6;
+        }
+
+        #result h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Disease Prediction System</h1>
+    </header>
+
+    <div class="container">
+        <h3>Select Symptoms:</h3>
+        <div id="symptom-list" class="symptom-container"></div>
+
+        <button onclick="predictDisease()">Predict Disease</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function loadSymptoms() {
+            try {
+                const response = await fetch('/get_symptoms');
+                const data = await response.json();
+
+                const symptomList = document.getElementById('symptom-list');
+                symptomList.innerHTML = ''; 
+
+                data.symptoms.forEach(symptom => {
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = symptom;
+                    checkbox.name = 'symptom';
+
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(` ${symptom}`));
+                    symptomList.appendChild(label);
+                });
+            } catch (error) {
+                console.error('Error loading symptoms:', error);
+                document.getElementById('symptom-list').innerText = 'Failed to load symptoms.';
+            }
+        }
+
+        async function predictDisease() {
+            const selectedSymptoms = Array.from(
+                document.querySelectorAll('input[name="symptom"]:checked')
+            ).map(input => input.value);
+
+            if (selectedSymptoms.length === 0) {
+                alert('Please select at least one symptom');
+                return;
+            }
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symptoms: selectedSymptoms })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    document.getElementById('result').innerHTML = `<strong>Error:</strong> ${error.error}`;
+                    return;
+                }
+
+                const result = await response.json();
+                document.getElementById('result').innerHTML = ` 
+                    <h3>Prediction Result:</h3>
+                    <p><strong>Disease:</strong> ${result.disease}</p>
+                    <p><strong>Cures:</strong> ${result.cures}</p>
+                    <p><strong>Doctor:</strong> ${result.doctor}</p>
+                    <p><strong>Risk Level:</strong> ${result['risk level']}</p>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `<strong>Error:</strong> Unable to process the prediction.`;
+            }
+        }
+
+        window.onload = loadSymptoms;
+    </script>
+</body>
+</html>
